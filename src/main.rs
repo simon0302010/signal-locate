@@ -1,4 +1,4 @@
-use fltk::{app, button::Button, prelude::*, window::Window};
+use fltk::{app, button::Button, prelude::*, window::Window, dialog};
 use wifiscanner::{self, scan};
 use chrono::{self, Utc};
 
@@ -7,15 +7,33 @@ fn main() {
         .with_scheme(app::Scheme::Gtk);
     let mut wind = Window::new(100, 100, 500, 400, "Signal Locate");
     let mut button = Button::default()
-        .with_size(60, 30)
+        .with_size(80, 30)
         .center_of(&wind)
-        .with_label("Button");
+        .with_label("Open File");
     wind.make_resizable(true);
     wind.size_range(450, 350, 0, 0);
     wind.end();
     wind.show();
-    button.set_callback(|_| println!("Button clicked."));
+    button.set_callback(|_| choose_file());
     app.run().unwrap();
+}
+
+fn choose_file() {
+    let mut chooser = dialog::FileChooser::new(
+        ".",
+        "*.png",
+        dialog::FileChooserType::Multi,
+        "Select Room plan",
+    );
+
+    chooser.show();
+    chooser.window().set_pos(300, 300);
+    if chooser.value(1).is_none() {
+        println!("(User hit 'Cancel')");
+        return;
+    }
+    println!("User selected: '{}'", chooser.value(1).unwrap());
+    return;
 }
 
 fn get_networks() -> i32 {
