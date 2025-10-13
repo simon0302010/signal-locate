@@ -1,12 +1,14 @@
-use fltk::{app, prelude::*, window::Window};
+use fltk::{app, button::{self, Button}, prelude::*, window::Window};
 use wifiscanner::{self, scan};
 use chrono::{self, Utc};
 
 fn main() {
     let app = app::App::default();
-    let mut wind = Window::new(100, 100, 400, 500, "Signal Locate");
+    let mut wind = Window::new(100, 100, 500, 400, "Signal Locate");
+    let mut button = Button::new((wind.width() / 2) - (60 / 2), wind.height() / 2, 60, 30, "Button");
     wind.end();
     wind.show();
+    button.set_callback(move |_| println!("Button clicked."));
     app.run().unwrap();
 }
 
