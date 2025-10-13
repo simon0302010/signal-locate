@@ -1,5 +1,5 @@
 use fltk::{app, button::Button, prelude::*, window::Window, dialog};
-use wifiscanner::{self, scan};
+use wifiscanner::{self, scan, Wifi};
 use chrono::{self, Utc};
 
 fn main() {
@@ -14,29 +14,28 @@ fn main() {
     wind.size_range(450, 350, 0, 0);
     wind.end();
     wind.show();
-    button.set_callback(|_| choose_file());
+    button.set_callback(|_| {
+        choose_file();
+    });
     app.run().unwrap();
 }
 
-fn choose_file() {
+fn choose_file() -> Option<String> {
     let mut chooser = dialog::FileChooser::new(
         ".",
-        "*.png",
+        "*.{png,jpg}",
         dialog::FileChooserType::Multi,
         "Select Room plan",
     );
-
     chooser.show();
     chooser.window().set_pos(300, 300);
-    if chooser.value(1).is_none() {
-        println!("(User hit 'Cancel')");
-        return;
+    while chooser.shown() {
+        app::wait();
     }
-    println!("User selected: '{}'", chooser.value(1).unwrap());
-    return;
+    return chooser.value(1);
 }
 
-fn get_networks() -> i32 {
+fn get_networks() -> Option<Vec<Wifi>> {
     let time_format: &'static str = "%Y-%m-%d %H:%M:%S";
     let scanner_result = scan();
     let current_time = Utc::now().format(time_format);
@@ -45,19 +44,16 @@ fn get_networks() -> i32 {
         Ok(wifis) => {
             if wifis.get(0) != None {
                 println!("\nDetected {} Networks at {}: ", wifis.len(), current_time);
-                for single_wifi in &wifis {
-                    println!("{}", single_wifi.ssid)
-                }
-                return 0;
+                return Some(wifis);
             } else {
                 println!("No Networks detected.");
                 println!("Please check your WiFi Adapter.");
-                return 1;
+                return None;
             }
         }
         Err(e) => {
             println!("Scan failed: {:?}", e);
-            return 1;
+            return None;
         }
     }
 }
