@@ -16,6 +16,10 @@ fn main() {
                     for single_wifi in &wifis {
                         println!("{}", single_wifi.ssid)
                     }
+                } else {
+                    println!("No Networks detected.");
+                    println!("Please check your WiFi Adapter.");
+                    std::process::exit(1);
                 }
             }
             Err(e) => {
