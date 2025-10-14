@@ -1,4 +1,4 @@
-use fltk::{app, button::Button, dialog, frame::{self, Frame}, image::{JpegImage, PngImage, SvgImage, SharedImage}, prelude::*, window::Window};
+use fltk::{app, button::Button, dialog, enums::Event, frame::Frame, image::SharedImage, prelude::*, window::Window};
 use wifiscanner::{self, scan, Wifi};
 use chrono::{self, Utc};
 use std::{rc::Rc, cell::RefCell};
@@ -31,6 +31,7 @@ fn main() {
         }
     });
 
+    // detect if button has been pressed
     let image_frame_button = Rc::clone(&image_frame);
     let file_path_button = Rc::clone(&file_path);
     let cached_image_button = Rc::clone(&cached_image);
@@ -55,7 +56,24 @@ fn main() {
             }
         }
     });
+
+    // detect if image frame has been clicked
+    let image_frame_clicked = Rc::clone(&image_frame);
+    image_frame_clicked.borrow_mut().handle(|f, ev: Event| {
+        return handle_clicked_frame(f, ev);
+    });
+
     app.run().unwrap();
+}
+
+fn handle_clicked_frame(f: &mut Frame, ev: Event) -> bool {
+    if ev == Event::Push {
+        println!("Pushed Image.");
+        println!("{}, {}", fltk::app::event_x() - f.x(), fltk::app::event_y() - f.y());
+        true
+    } else {
+        false
+    }
 }
 
 fn choose_file() -> Option<String>{
@@ -71,45 +89,6 @@ fn choose_file() -> Option<String>{
         app::wait();
     }
     return chooser.value(1);
-}
-
-fn set_image(image_path: &str, image_frame: &mut frame::Frame) {
-    let frame_w = image_frame.width();
-    let frame_h = image_frame.height();
-
-    if image_path.ends_with(".png") {
-        match PngImage::load(image_path) {
-            Ok(mut img) => {
-                img.scale(frame_w, frame_h, true, true);
-                image_frame.set_image(Some(img));
-            }
-            Err(e) => {
-                println!("An error occurred: {:?}", e)
-            }
-        }
-    } else if image_path.ends_with(".jpg") || image_path.ends_with(".jpeg") {
-        match JpegImage::load(image_path) {
-            Ok(mut img) => {
-                img.scale(frame_w, frame_h, true, true);
-                image_frame.set_image(Some(img));
-            }
-            Err(e) => {
-                println!("An error occurred: {:?}", e)
-            }
-        }
-    } else if image_path.ends_with(".svg") {
-        match SvgImage::load(image_path) {
-            Ok(mut img) => {
-                img.scale(frame_w, frame_h, true, true);
-                image_frame.set_image(Some(img));
-            }
-            Err(e) => {
-                println!("An error occurred: {:?}", e)
-            }
-        }
-    } else {
-        println!("Unsupported image format.")
-    }
 }
 
 fn get_networks() -> Option<Vec<Wifi>> {
