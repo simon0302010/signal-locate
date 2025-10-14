@@ -9,12 +9,12 @@ fn main() {
 
     let app = app::App::default()
         .with_scheme(app::Scheme::Gtk);
-    let mut wind = Window::new(100, 100, 500, 400, "Signal Locate");
+    let mut wind = Window::new(100, 100, 600, 600, "Signal Locate");
     let mut button = Button::default()
         .with_size(80, 30)
-        .with_pos(210, 20)
+        .with_pos(wind.width() / 2 - 80 / 2, 20)
         .with_label("Open File");
-    let image_frame = Rc::new(RefCell::new(Frame::new(0, 60, 500, 440, "")));
+    let image_frame = Rc::new(RefCell::new(Frame::new(0, 60, 500, 500, "")));
     wind.make_resizable(true);
     wind.size_range(450, 350, 0, 0);
     wind.end();
@@ -23,10 +23,10 @@ fn main() {
     let image_frame_resize = Rc::clone(&image_frame);
     let cached_img_resize = Rc::clone(&cached_image);
     wind.resize_callback(move |_, _, _, w, h| {
-        image_frame_resize.borrow_mut().set_size(w, h - 60);
+        image_frame_resize.borrow_mut().set_size(w, h - 100);
         if let Some(ref img) = *cached_img_resize.borrow() {
             let mut img = img.clone();
-            img.scale(w, h -60, true, true);
+            img.scale(w, h - 100, true, true);
             image_frame_resize.borrow_mut().set_image(Some(img));
         }
     });
@@ -59,18 +59,41 @@ fn main() {
 
     // detect if image frame has been clicked
     let image_frame_clicked = Rc::clone(&image_frame);
-    image_frame_clicked.borrow_mut().handle(|f, ev: Event| {
-        return handle_clicked_frame(f, ev);
+    let cached_image_clicked = Rc::clone(&cached_image);
+    image_frame_clicked.borrow_mut().handle(move |f, ev: Event| {
+        return get_click_coords(f, ev, &cached_image_clicked.borrow());
     });
 
     app.run().unwrap();
 }
 
-fn handle_clicked_frame(f: &mut Frame, ev: Event) -> bool {
+fn get_click_coords(f: &mut Frame, ev: Event, img: &Option<SharedImage>) -> bool {
     if ev == Event::Push {
         println!("Pushed Image.");
-        println!("{}, {}", fltk::app::event_x() - f.x(), fltk::app::event_y() - f.y());
-        true
+        let click_x = fltk::app::event_x() - f.x();
+        let click_y = fltk::app::event_y() - f.y();
+        let frame_w = f.width();
+        let frame_h = f.height();
+        
+        if let Some(img) = img {
+            let img_w = img.width();
+            let img_h = img.height();
+
+            let offset_x = (frame_w - img_w) / 2;
+            let offset_y = (frame_h - img_h) / 2;
+
+            let rel_x = click_x - offset_x;
+            let rel_y = click_y - offset_y;
+
+            let prop_x: f64 = rel_x as f64 / img_w as f64;
+            let prop_y: f64 = rel_y as f64 / img_w as f64;
+
+            println!("Clicked image at {}, {}", prop_x, prop_y);
+
+            return true;
+        } else {
+            return false;
+        }
     } else {
         false
     }
