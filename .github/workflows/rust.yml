@@ -34,7 +34,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install libs
+      - name: Install stuff
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -42,6 +42,11 @@ jobs:
             libx11-dev libxext-dev libxft-dev libxinerama-dev \
             libxcursor-dev libxrender-dev libxfixes-dev libpango1.0-dev \
             libglib2.0-dev libcairo2-dev
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+            libx11-dev libxext-dev libxft-dev libxinerama-dev \
+            libxcursor-dev libxrender-dev libxfixes-dev \
+            libpango1.0-dev libglib2.0-dev libcairo2-dev
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
