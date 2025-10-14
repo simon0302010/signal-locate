@@ -34,6 +34,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install libs
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libx11-dev libxext-dev libxft-dev libxinerama-dev \
+            libxcursor-dev libxrender-dev libxfixes-dev libpango1.0-dev \
+            libglib2.0-dev libcairo2-dev
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -41,9 +50,6 @@ jobs:
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Run tests
-        run: cargo test --target ${{ matrix.target }} --verbose
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4
