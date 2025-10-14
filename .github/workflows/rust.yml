@@ -1,14 +1,11 @@
 name: Rust CI
-
 on:
   push:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
-
 env:
   CARGO_TERM_COLOR: always
-
 jobs:
   build:
     name: Build on ${{ matrix.os }} (${{ matrix.target }})
@@ -29,35 +26,53 @@ jobs:
             target: x86_64-pc-windows-msvc
           - os: windows-latest
             target: aarch64-pc-windows-msvc
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install stuff
-        if: runner.os == 'Linux'
+      
+      - name: Install Linux dependencies (native)
+        if: runner.os == 'Linux' && matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libx11-dev libxext-dev libxft-dev libxinerama-dev \
             libxcursor-dev libxrender-dev libxfixes-dev libpango1.0-dev \
             libglib2.0-dev libcairo2-dev
+      
+      - name: Install Linux dependencies (aarch64 cross)
+        if: runner.os == 'Linux' && matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo dpkg --add-architecture arm64
+          sudo sed -i 's/deb http/deb [arch=amd64] http/' /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs) main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs)-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          sudo apt-get update
           sudo apt-get install -y \
             gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-            libx11-dev libxext-dev libxft-dev libxinerama-dev \
-            libxcursor-dev libxrender-dev libxfixes-dev \
-            libpango1.0-dev libglib2.0-dev libcairo2-dev
-
+            libx11-dev:arm64 libxext-dev:arm64 libxft-dev:arm64 \
+            libxinerama-dev:arm64 libxcursor-dev:arm64 libxrender-dev:arm64 \
+            libxfixes-dev:arm64 libpango1.0-dev:arm64 libglib2.0-dev:arm64 \
+            libcairo2-dev:arm64
+      
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-
-      - name: Build
+      
+      - name: Build (Linux aarch64)
+        if: runner.os == 'Linux' && matrix.target == 'aarch64-unknown-linux-gnu'
+        env:
+          PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
+          PKG_CONFIG_ALLOW_CROSS: 1
+          PKG_CONFIG_SYSROOT_DIR: /
         run: cargo build --release --target ${{ matrix.target }}
-
+      
+      - name: Build (other targets)
+        if: ${{ !(runner.os == 'Linux' && matrix.target == 'aarch64-unknown-linux-gnu') }}
+        run: cargo build --release --target ${{ matrix.target }}
+      
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/
+          path: target/${{ matrix.target }}/release/signal-locate*
