@@ -1,4 +1,4 @@
-use fltk::{app, button::Button, dialog, draw, enums::{Color, Event}, frame::Frame, image::{RgbImage, SharedImage}, prelude::*, window::Window};
+use fltk::{app, button::Button, dialog, enums::Event, frame::Frame, image::SharedImage, prelude::*, window::Window};
 use wifiscanner::{self, scan, Wifi};
 use chrono::{self, Utc};
 use std::{rc::Rc, cell::RefCell};
@@ -69,7 +69,7 @@ fn main() {
 
 fn handle_image_click(f: &mut Frame, ev: Event, img: &Option<SharedImage>) -> bool {
     if ev == Event::Push {
-        println!("Pushed Image.");
+        println!("Clicked on image.");
         let click_x = fltk::app::event_x() - f.x();
         let click_y = fltk::app::event_y() - f.y();
         let frame_w = f.width();
@@ -85,9 +85,6 @@ fn handle_image_click(f: &mut Frame, ev: Event, img: &Option<SharedImage>) -> bo
             let rel_x = click_x - offset_x;
             let rel_y = click_y - offset_y;
 
-            let new_img = draw_on_image(img, rel_x, rel_y, 10);
-            f.set_image(Some(new_img));
-
             let prop_x: f64 = rel_x as f64 / img_w as f64;
             let prop_y: f64 = rel_y as f64 / img_w as f64;            
 
@@ -100,20 +97,6 @@ fn handle_image_click(f: &mut Frame, ev: Event, img: &Option<SharedImage>) -> bo
     } else {
         false
     }
-}
-
-fn draw_on_image(img: &SharedImage, circle_x: i32, circle_y: i32, circle_radius: i32) -> RgbImage {
-    let w = img.width();
-    let h = img.height();
-
-    let mut offscreen = draw::Offscreen::new(w, h).unwrap();
-    offscreen.begin();
-
-    img.clone().draw(0, 0, w, h);
-    draw::draw_circle_fill(circle_x, circle_y, circle_radius, Color::Blue);
-    
-    offscreen.end();
-    return draw::capture_offscreen(&mut offscreen, w, h).unwrap();
 }
 
 fn choose_file() -> Option<String>{
