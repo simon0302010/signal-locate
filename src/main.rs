@@ -3,6 +3,9 @@ use wifiscanner::{self, scan, Wifi};
 use chrono::{self, Utc};
 use std::{rc::Rc, cell::RefCell};
 
+mod heatmap;
+use heatmap::gen_heatmap;
+
 fn main() {
     let file_path: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
     let cached_image: Rc<RefCell<Option<SharedImage>>> = Rc::new(RefCell::new(None));
@@ -86,7 +89,7 @@ fn handle_image_click(f: &mut Frame, ev: Event, img: &Option<SharedImage>) -> bo
             let rel_y = click_y - offset_y;
 
             let prop_x: f64 = rel_x as f64 / img_w as f64;
-            let prop_y: f64 = rel_y as f64 / img_w as f64;            
+            let prop_y: f64 = rel_y as f64 / img_h as f64;            
 
             println!("Clicked image at {}, {}", prop_x, prop_y);
 
