@@ -2,6 +2,7 @@ use image::{RgbImage, Rgb};
 use rand::Rng;
 
 // function to create test heatmap
+#[allow(dead_code)]
 pub fn generate_random() {
     let points_count = 10;
     let mut points: Vec<(usize, usize, f64)> = Vec::new();
@@ -46,6 +47,7 @@ pub fn gen_heatmap(points: &[(usize, usize, f64)], width: usize, height: usize, 
     img
 }
 
+#[allow(dead_code)]
 fn heatmap_color(v: f64) -> Rgb<u8> {
     let v = v.max(0.0).min(1.0);
     let r = (255.0 * (v - 0.5).max(0.0) * 2.0) as u8;

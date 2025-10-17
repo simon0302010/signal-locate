@@ -1,7 +1,7 @@
-use fltk::{app, button::Button, dialog, enums::Event, frame::Frame, image::SharedImage, prelude::*, window::Window};
+use fltk::{app, button::Button, dialog::{self, alert_default}, enums::Event, frame::Frame, image::SharedImage, input::Input, menu::Choice, prelude::*, window::Window};
 use wifiscanner::{self, scan, Wifi};
 use chrono::{self, Utc};
-use std::{rc::Rc, cell::RefCell};
+use std::{cell::{Ref, RefCell}, rc::Rc};
 
 mod heatmap;
 use heatmap::gen_heatmap;
@@ -10,14 +10,31 @@ fn main() {
     let file_path: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
     let cached_image: Rc<RefCell<Option<SharedImage>>> = Rc::new(RefCell::new(None));
 
+    let wifis = get_networks();
+    if wifis.is_none() {
+        println!("Exiting.");
+        return;
+    }
+
     let app = app::App::default()
         .with_scheme(app::Scheme::Gtk);
-    let mut wind = Window::new(100, 100, 600, 600, "Signal Locate");
+    let mut wind = Window::new(100, 100, 600, 640, "Signal Locate");
     let mut button = Button::default()
-        .with_size(80, 30)
-        .with_pos(wind.width() / 2 - 80 / 2, 20)
-        .with_label("Open File");
-    let image_frame = Rc::new(RefCell::new(Frame::new(0, 60, 500, 500, "")));
+        .with_size(160, 30)
+        .with_pos(wind.width() / 2 - 500 / 2, 20)
+        .with_label("Open Room Plan");
+    
+    let wifi_choice = Rc::new(RefCell::new(Choice::new(
+        wind.width() / 2 + 50, 20, 200, 30, "Select Network:"
+    )));    
+    wifi_choice.borrow_mut().add_choice("Select");
+    for wifi_network in wifis.as_ref().unwrap() {
+        wifi_choice.borrow_mut().add_choice(&wifi_network.ssid);
+    }
+    wifi_choice.borrow_mut().set_value(0);
+    
+    let image_frame = Rc::new(RefCell::new(Frame::new(0, 80, 500, 500, "")));
+
     wind.make_resizable(true);
     wind.size_range(450, 350, 0, 0);
     wind.end();
@@ -40,7 +57,7 @@ fn main() {
     let cached_image_button = Rc::clone(&cached_image);
     button.set_callback(move |_| {
         let new_path = choose_file();
-        println!("{:?}", new_path);
+        println!("Loaded image: {}", new_path.clone().unwrap_or_default().to_string());
         *file_path_button.borrow_mut() = new_path;
         if let Some(path) = file_path_button.borrow().as_ref() {
             // load and cache
@@ -63,16 +80,17 @@ fn main() {
     // detect if image frame has been clicked
     let image_frame_clicked = Rc::clone(&image_frame);
     let cached_image_clicked = Rc::clone(&cached_image);
+    let wifi_choice_clicked = Rc::clone(&wifi_choice);
     image_frame_clicked.borrow_mut().handle(move |f, ev: Event| {
-        return handle_image_click(f, ev, &cached_image_clicked.borrow());
+        return handle_image_click(f, ev, &cached_image_clicked.borrow(), &wifi_choice_clicked.borrow());
     });
 
     app.run().unwrap();
 }
 
-fn handle_image_click(f: &mut Frame, ev: Event, img: &Option<SharedImage>) -> bool {
+fn handle_image_click(f: &mut Frame, ev: Event, img: &Option<SharedImage>, wifi_choice: &Choice) -> bool {
     if ev == Event::Push {
-        println!("Clicked on image.");
+        println!("User clicked on image frame.");
         let click_x = fltk::app::event_x() - f.x();
         let click_y = fltk::app::event_y() - f.y();
         let frame_w = f.width();
@@ -91,7 +109,13 @@ fn handle_image_click(f: &mut Frame, ev: Event, img: &Option<SharedImage>) -> bo
             let prop_x: f64 = rel_x as f64 / img_w as f64;
             let prop_y: f64 = rel_y as f64 / img_h as f64;            
 
-            println!("Clicked image at {}, {}", prop_x, prop_y);
+            println!("User clicked image at {}, {}", prop_x, prop_y);
+
+            if wifi_choice.value() == 0 {
+                println!("No WiFi selected. Alerting user.");
+                alert_default("Please select a WiFi Network first.");
+                return false;
+            }
 
             return true;
         } else {
@@ -138,4 +162,19 @@ fn get_networks() -> Option<Vec<Wifi>> {
             return None;
         }
     }
+}
+
+fn strength_by_ssid(ssid: String) -> Option<f64> {
+    let min_rssi = -100.0;
+    let max_rssi = -30.0;
+    let wifis = get_networks();
+    for wifi_network in wifis.as_ref().unwrap() {
+        if wifi_network.ssid == ssid {
+            if let Ok(rssi) = wifi_network.signal_level.parse::<f64>() {
+                let normalized = ((rssi - min_rssi) / (max_rssi - min_rssi)).clamp(0.0, 1.0);
+                return Some(normalized);
+            }
+        }
+    }
+    return None
 }
