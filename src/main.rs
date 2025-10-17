@@ -1,14 +1,23 @@
 use fltk::{app, button::Button, dialog::{self, alert_default}, enums::Event, frame::Frame, image::SharedImage, input::Input, menu::Choice, prelude::*, window::Window};
-use wifiscanner::{self, scan, Wifi};
-use chrono::{self, Utc};
-use std::{cell::{Ref, RefCell}, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 mod heatmap;
 use heatmap::gen_heatmap;
 
+mod wifitools;
+use wifitools::get_networks;
+
+struct WiFiMeasurement {
+    ssid: String,
+    strength: f64,
+    x: f64,
+    y: f64
+}
+
 fn main() {
     let file_path: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
     let cached_image: Rc<RefCell<Option<SharedImage>>> = Rc::new(RefCell::new(None));
+    let mut measurement_points: Vec<WiFiMeasurement> = Vec::new();
 
     let wifis = get_networks();
     if wifis.is_none() {
@@ -19,7 +28,7 @@ fn main() {
     let app = app::App::default()
         .with_scheme(app::Scheme::Gtk);
     let mut wind = Window::new(100, 100, 600, 640, "Signal Locate");
-    let mut button = Button::default()
+    let mut open_button = Button::default()
         .with_size(160, 30)
         .with_pos(wind.width() / 2 - 500 / 2, 20)
         .with_label("Open Room Plan");
@@ -51,28 +60,28 @@ fn main() {
         }
     });
 
-    // detect if button has been pressed
-    let image_frame_button = Rc::clone(&image_frame);
-    let file_path_button = Rc::clone(&file_path);
-    let cached_image_button = Rc::clone(&cached_image);
-    button.set_callback(move |_| {
+    // detect if open button has been pressed
+    let image_frame_open_button = Rc::clone(&image_frame);
+    let file_path_open_button = Rc::clone(&file_path);
+    let cached_image_open_button = Rc::clone(&cached_image);
+    open_button.set_callback(move |_| {
         let new_path = choose_file();
         println!("Loaded image: {}", new_path.clone().unwrap_or_default().to_string());
-        *file_path_button.borrow_mut() = new_path;
-        if let Some(path) = file_path_button.borrow().as_ref() {
+        *file_path_open_button.borrow_mut() = new_path;
+        if let Some(path) = file_path_open_button.borrow().as_ref() {
             // load and cache
             if let Ok(img) = fltk::image::SharedImage::load(&path) {
-                *cached_image_button.borrow_mut() = Some(img);
+                *cached_image_open_button.borrow_mut() = Some(img);
             } else {
-                *cached_image_button.borrow_mut() = None;
+                *cached_image_open_button.borrow_mut() = None;
             }
             // draw
-            if let Some(ref img) = *cached_image_button.borrow() {
+            if let Some(ref img) = *cached_image_open_button.borrow() {
                 let mut img = img.clone();
-                let frame_w = image_frame_button.borrow().width();
-                let frame_h = image_frame_button.borrow().height();
+                let frame_w = image_frame_open_button.borrow().width();
+                let frame_h = image_frame_open_button.borrow().height();
                 img.scale(frame_w, frame_h, true, true);
-                image_frame_button.borrow_mut().set_image(Some(img));
+                image_frame_open_button.borrow_mut().set_image(Some(img));
             }
         }
     });
@@ -139,42 +148,4 @@ fn choose_file() -> Option<String>{
         app::wait();
     }
     return chooser.value(1);
-}
-
-fn get_networks() -> Option<Vec<Wifi>> {
-    let time_format: &'static str = "%Y-%m-%d %H:%M:%S";
-    let scanner_result = scan();
-    let current_time = Utc::now().format(time_format);
-    println!("Time: {}", current_time);
-    match scanner_result {
-        Ok(wifis) => {
-            if wifis.get(0) != None {
-                println!("\nDetected {} Networks at {}: ", wifis.len(), current_time);
-                return Some(wifis);
-            } else {
-                println!("No Networks detected.");
-                println!("Please check your WiFi Adapter.");
-                return None;
-            }
-        }
-        Err(e) => {
-            println!("Scan failed: {:?}", e);
-            return None;
-        }
-    }
-}
-
-fn strength_by_ssid(ssid: String) -> Option<f64> {
-    let min_rssi = -100.0;
-    let max_rssi = -30.0;
-    let wifis = get_networks();
-    for wifi_network in wifis.as_ref().unwrap() {
-        if wifi_network.ssid == ssid {
-            if let Ok(rssi) = wifi_network.signal_level.parse::<f64>() {
-                let normalized = ((rssi - min_rssi) / (max_rssi - min_rssi)).clamp(0.0, 1.0);
-                return Some(normalized);
-            }
-        }
-    }
-    return None
 }
