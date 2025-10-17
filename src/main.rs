@@ -17,7 +17,7 @@ struct WiFiMeasurement {
 fn main() {
     let file_path: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
     let cached_image: Rc<RefCell<Option<SharedImage>>> = Rc::new(RefCell::new(None));
-    let mut measurement_points: Vec<WiFiMeasurement> = Vec::new();
+    let mut measurement_points: Rc<RefCell<Vec<WiFiMeasurement>>> = Rc::new(RefCell::new(Vec::new()));
 
     let wifis = get_networks();
     if wifis.is_none() {
@@ -90,48 +90,49 @@ fn main() {
     let image_frame_clicked = Rc::clone(&image_frame);
     let cached_image_clicked = Rc::clone(&cached_image);
     let wifi_choice_clicked = Rc::clone(&wifi_choice);
+    let wifi_measurements_clicked = Rc::clone(&measurement_points);
     image_frame_clicked.borrow_mut().handle(move |f, ev: Event| {
-        return handle_image_click(f, ev, &cached_image_clicked.borrow(), &wifi_choice_clicked.borrow());
+        if ev == Event::Push {
+            return handle_image_click(f, &cached_image_clicked.borrow(), &wifi_choice_clicked.borrow());
+        } else {
+            return false;
+        }
     });
 
     app.run().unwrap();
 }
 
-fn handle_image_click(f: &mut Frame, ev: Event, img: &Option<SharedImage>, wifi_choice: &Choice) -> bool {
-    if ev == Event::Push {
-        println!("User clicked on image frame.");
-        let click_x = fltk::app::event_x() - f.x();
-        let click_y = fltk::app::event_y() - f.y();
-        let frame_w = f.width();
-        let frame_h = f.height();
+fn handle_image_click(f: &mut Frame, img: &Option<SharedImage>, wifi_choice: &Choice) -> bool {
+    println!("User clicked on image frame.");
+    let click_x = fltk::app::event_x() - f.x();
+    let click_y = fltk::app::event_y() - f.y();
+    let frame_w = f.width();
+    let frame_h = f.height();
 
-        if let Some(img) = img {
-            let img_w = img.width();
-            let img_h = img.height();
+    if let Some(img) = img {
+        let img_w = img.width();
+        let img_h = img.height();
 
-            let offset_x = (frame_w - img_w) / 2;
-            let offset_y = (frame_h - img_h) / 2;
+        let offset_x = (frame_w - img_w) / 2;
+        let offset_y = (frame_h - img_h) / 2;
 
-            let rel_x = click_x - offset_x;
-            let rel_y = click_y - offset_y;
+        let rel_x = click_x - offset_x;
+        let rel_y = click_y - offset_y;
 
-            let prop_x: f64 = rel_x as f64 / img_w as f64;
-            let prop_y: f64 = rel_y as f64 / img_h as f64;            
+        let prop_x: f64 = rel_x as f64 / img_w as f64;
+        let prop_y: f64 = rel_y as f64 / img_h as f64;            
 
-            println!("User clicked image at {}, {}", prop_x, prop_y);
+        println!("User clicked image at {}, {}", prop_x, prop_y);
 
-            if wifi_choice.value() == 0 {
-                println!("No WiFi selected. Alerting user.");
-                alert_default("Please select a WiFi Network first.");
-                return false;
-            }
-
-            return true;
-        } else {
+        if wifi_choice.value() == 0 {
+            println!("No WiFi selected. Alerting user.");
+            alert_default("Please select a WiFi Network first.");
             return false;
         }
+
+        return true;
     } else {
-        false
+        return false;
     }
 }
 
