@@ -23,7 +23,7 @@ pub fn get_networks() -> Option<Vec<Wifi>> {
     }
 }
 
-pub fn strength_by_ssid(ssid: String) -> Option<f64> {
+pub fn strength_by_ssid(ssid: String) -> f64 {
     let min_rssi = -100.0;
     let max_rssi = -30.0;
     let wifis = get_networks();
@@ -31,9 +31,9 @@ pub fn strength_by_ssid(ssid: String) -> Option<f64> {
         if wifi_network.ssid == ssid {
             if let Ok(rssi) = wifi_network.signal_level.parse::<f64>() {
                 let normalized = ((rssi - min_rssi) / (max_rssi - min_rssi)).clamp(0.0, 1.0);
-                return Some(normalized);
+                return normalized;
             }
         }
     }
-    return None
+    return 0.0;
 }

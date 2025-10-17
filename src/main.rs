@@ -5,13 +5,13 @@ mod heatmap;
 use heatmap::gen_heatmap;
 
 mod wifitools;
-use wifitools::get_networks;
+use wifitools::{get_networks, strength_by_ssid};
 
 struct WiFiMeasurement {
     ssid: String,
     strength: f64,
-    x: f64,
-    y: f64
+    prop_x: f64,
+    prop_y: f64
 }
 
 fn main() {
@@ -93,7 +93,7 @@ fn main() {
     let wifi_measurements_clicked = Rc::clone(&measurement_points);
     image_frame_clicked.borrow_mut().handle(move |f, ev: Event| {
         if ev == Event::Push {
-            return handle_image_click(f, &cached_image_clicked.borrow(), &wifi_choice_clicked.borrow());
+            return handle_image_click(f, &cached_image_clicked.borrow(), &wifi_choice_clicked.borrow(), &mut wifi_measurements_clicked.borrow_mut());
         } else {
             return false;
         }
@@ -102,7 +102,7 @@ fn main() {
     app.run().unwrap();
 }
 
-fn handle_image_click(f: &mut Frame, img: &Option<SharedImage>, wifi_choice: &Choice) -> bool {
+fn handle_image_click(f: &mut Frame, img: &Option<SharedImage>, wifi_choice: &Choice, wifi_measurements: &mut Vec<WiFiMeasurement>) -> bool {
     println!("User clicked on image frame.");
     let click_x = fltk::app::event_x() - f.x();
     let click_y = fltk::app::event_y() - f.y();
@@ -110,6 +110,13 @@ fn handle_image_click(f: &mut Frame, img: &Option<SharedImage>, wifi_choice: &Ch
     let frame_h = f.height();
 
     if let Some(img) = img {
+        // check if wifi is selected
+        if wifi_choice.value() == 0 {
+            println!("No WiFi selected. Alerting user.");
+            alert_default("Please select a WiFi Network first.");
+            return false;
+        }
+
         let img_w = img.width();
         let img_h = img.height();
 
@@ -122,13 +129,20 @@ fn handle_image_click(f: &mut Frame, img: &Option<SharedImage>, wifi_choice: &Ch
         let prop_x: f64 = rel_x as f64 / img_w as f64;
         let prop_y: f64 = rel_y as f64 / img_h as f64;            
 
-        println!("User clicked image at {}, {}", prop_x, prop_y);
+        println!("User clicked image at {}, {}. Storing point.", prop_x, prop_y);
 
-        if wifi_choice.value() == 0 {
-            println!("No WiFi selected. Alerting user.");
-            alert_default("Please select a WiFi Network first.");
-            return false;
-        }
+        let ssid = wifi_choice.choice().unwrap_or_default();
+
+        let signal_strength = strength_by_ssid(ssid.clone());
+
+        let current_measurement = WiFiMeasurement {
+            ssid: ssid.clone(),
+            strength: signal_strength,
+            prop_x: prop_x,
+            prop_y: prop_y
+        };
+
+        wifi_measurements.push(current_measurement);
 
         return true;
     } else {
