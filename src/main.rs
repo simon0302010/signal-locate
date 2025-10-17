@@ -7,6 +7,7 @@ use heatmap::gen_heatmap;
 mod wifitools;
 use wifitools::{get_networks, strength_by_ssid};
 
+#[derive(Debug)]
 struct WiFiMeasurement {
     ssid: String,
     strength: f64,
@@ -17,7 +18,7 @@ struct WiFiMeasurement {
 fn main() {
     let file_path: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
     let cached_image: Rc<RefCell<Option<SharedImage>>> = Rc::new(RefCell::new(None));
-    let mut measurement_points: Rc<RefCell<Vec<WiFiMeasurement>>> = Rc::new(RefCell::new(Vec::new()));
+    let measurement_points: Rc<RefCell<Vec<WiFiMeasurement>>> = Rc::new(RefCell::new(Vec::new()));
 
     let wifis = get_networks();
     if wifis.is_none() {
@@ -129,7 +130,7 @@ fn handle_image_click(f: &mut Frame, img: &Option<SharedImage>, wifi_choice: &Ch
         let prop_x: f64 = rel_x as f64 / img_w as f64;
         let prop_y: f64 = rel_y as f64 / img_h as f64;            
 
-        println!("User clicked image at {}, {}. Storing point.", prop_x, prop_y);
+        println!("User clicked image at {}, {}", prop_x, prop_y);
 
         let ssid = wifi_choice.choice().unwrap_or_default();
 
@@ -141,6 +142,8 @@ fn handle_image_click(f: &mut Frame, img: &Option<SharedImage>, wifi_choice: &Ch
             prop_x: prop_x,
             prop_y: prop_y
         };
+
+        println!("Measurement: {:?}", &current_measurement);
 
         wifi_measurements.push(current_measurement);
 
