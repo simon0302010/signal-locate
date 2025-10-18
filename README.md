@@ -1,5 +1,7 @@
 [![Rust CI](https://github.com/simon0302010/signal-locate/actions/workflows/rust.yml/badge.svg)](https://github.com/simon0302010/signal-locate/actions/workflows/rust.yml)
 ![Hackatime](https://hackatime-badge.hackclub.com/U08HC7N4JJW/signal-locate)
+![Crates.io Total Downloads](https://img.shields.io/crates/d/signal-locate)
+![Crates.io Version](https://img.shields.io/crates/v/signal-locate)
 
 # Signal Locate
 
