@@ -11,13 +11,13 @@ pub fn get_networks() -> Option<Vec<Wifi>> {
                 println!("Detected {} Networks at {}.", wifis.len(), current_time);
                 return Some(wifis);
             } else {
-                println!("No Networks detected.");
-                println!("Please check your WiFi Adapter.");
+                eprintln!("No Networks detected.");
+                eprintln!("Please check your WiFi Adapter.");
                 return None;
             }
         }
         Err(e) => {
-            println!("Scan failed: {:?}", e);
+            eprintln!("Scan failed: {:?}", e);
             return None;
         }
     }

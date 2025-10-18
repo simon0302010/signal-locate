@@ -7,6 +7,7 @@ use heatmap::gen_heatmap;
 mod wifitools;
 use wifitools::{get_networks, strength_by_ssid};
 
+#[derive(Clone)]
 #[derive(Debug)]
 struct WiFiMeasurement {
     ssid: String,
@@ -94,14 +95,62 @@ fn main() {
 
     let measurements_points_save = Rc::clone(&measurement_points);
     let wifi_choice_save = Rc::clone(&wifi_choice);
+    let file_path_save = Rc::clone(&file_path);
     save_button.set_callback(move |_| {
         if !measurements_points_save.borrow().is_empty() {
+            let wifi_choice_str = &wifi_choice_save.borrow().choice().unwrap_or_default();
             println!("Measurements: {:?}", measurements_points_save.borrow());
-            if let Some(file_path) = save_dialog(&wifi_choice_save.borrow().choice().unwrap_or_default()) {
-                println!("Save Path: {}", file_path);
+            if let Some(save_path) = save_dialog(&wifi_choice_str) {
+                println!("Save Path: {}", save_path);
+
+                let temp_img = if let Some(ref path) = *file_path_save.borrow() {
+                    SharedImage::load(path)
+                } else {
+                    eprintln!("No file selected.");
+                    Err(FltkError::Internal(FltkErrorKind::ResourceNotFound))
+                };
+
+                let (img_width, img_height) = match temp_img {
+                    Ok(ref img) => (img.width(), img.height()),
+                    Err(_) => {
+                        eprintln!("Failed to load image for heatmap.");
+                        alert_default("Failed to load image for heatmap.");
+                        return;
+                    }
+                };
+
+                let filtered_measurements: Vec<_> = if !wifi_choice_str.is_empty() {
+                    measurements_points_save
+                        .borrow()
+                        .iter()
+                        .filter(|wifi| wifi.ssid == *wifi_choice_str)
+                        .cloned()
+                        .collect()
+                } else {
+                    measurements_points_save.borrow().clone()
+                };
+
+                let points: Vec<(f64, f64, f64)> = filtered_measurements
+                    .iter()
+                    .map(|m| (
+                        m.prop_x * img_width as f64,
+                        m.prop_y * img_height as f64,
+                        m.strength
+                    ))
+                    .collect();
+
+                let generated_heatmap = gen_heatmap(&points, img_width as usize, img_height as usize, (img_width as f64 * 0.1) as usize);
+
+                match generated_heatmap.save(save_path) {
+                    Ok(_) => message_default("Successfully created heatmap."),
+                    Err(e) => {
+                        eprintln!("Failed to save heatmap: {}", e);
+                        alert_default("Failed to save heatmap.");
+                    }
+                }
             }
         } else {
-            println!("No WiFi selected. Alerting user.");
+            eprintln!("No measurements found. Alerting user.");
             alert_default("Please take some measurements first by clicking the image.");
         }
     });
@@ -132,7 +181,7 @@ fn handle_image_click(f: &mut Frame, img: &Option<SharedImage>, wifi_choice: &Ch
     if let Some(img) = img {
         // check if wifi is selected
         if wifi_choice.value() == 0 {
-            println!("No WiFi selected. Alerting user.");
+            eprintln!("No WiFi selected. Alerting user.");
             alert_default("Please select a WiFi Network first.");
             return false;
         }

@@ -5,12 +5,12 @@ use rand::Rng;
 #[allow(dead_code)]
 pub fn generate_random() {
     let points_count = 10;
-    let mut points: Vec<(usize, usize, f64)> = Vec::new();
+    let mut points: Vec<(f64, f64, f64)> = Vec::new();
     let mut rng = rand::rng();
 
     for _ in 0..points_count {
-        let x = rng.random_range(0..1920);
-        let y = rng.random_range(0..1080);
+        let x = rng.random_range(0..1920) as f64;
+        let y = rng.random_range(0..1080) as f64;
         let strength = rng.random_range(0.0..100.0);
         points.push((x, y, strength));
     }
@@ -19,15 +19,18 @@ pub fn generate_random() {
     img.save("heatmap.png").unwrap();
 }
 
-pub fn gen_heatmap(points: &[(usize, usize, f64)], width: usize, height: usize, radius: usize) -> RgbImage {
+// point: (x, y, strength)
+pub fn gen_heatmap(points: &[(f64, f64, f64)], width: usize, height: usize, radius: usize) -> RgbImage {
     let sigma = radius as f64 / 2.0;
     let mut heatmap = vec![vec![0.0f64; width]; height];
 
     for &(px, py, strength) in points {
+        let px = px as i32;
+        let py = py as i32;
         for y in 0..height {
             for x in 0..width {
-                let dx = x as i32 - px as i32;
-                let dy = y as i32 - py as i32;
+                let dx = x as i32 - px;
+                let dy = y as i32 - py;
                 let dist2 = dx*dx + dy*dy;
                 let weight = (-dist2 as f64 / (2.0 * sigma * sigma)).exp();
                 heatmap[y][x] += strength * weight;
