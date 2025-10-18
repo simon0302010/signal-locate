@@ -25,7 +25,7 @@ pub fn get_networks() -> Option<Vec<Wifi>> {
 
 pub fn strength_by_ssid(ssid: String) -> f64 {
     let min_rssi = -100.0;
-    let max_rssi = -30.0;
+    let max_rssi = -35.0;
     let wifis = get_networks();
     for wifi_network in wifis.as_ref().unwrap() {
         if wifi_network.ssid == ssid {

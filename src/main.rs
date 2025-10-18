@@ -1,4 +1,4 @@
-use fltk::{app, button::Button, dialog::{self, alert_default}, enums::Event, frame::Frame, image::SharedImage, input::Input, menu::Choice, prelude::*, window::Window};
+use fltk::{app, button::Button, dialog::{self, alert_default, message_default}, enums::Event, frame::Frame, image::SharedImage, menu::Choice, prelude::*, window::Window};
 use std::{cell::RefCell, rc::Rc};
 
 mod heatmap;
@@ -28,7 +28,7 @@ fn main() {
 
     let app = app::App::default()
         .with_scheme(app::Scheme::Gtk);
-    let mut wind = Window::new(100, 100, 600, 640, "Signal Locate");
+    let mut wind = Window::new(100, 100, 600, 700, "Signal Locate");
     let mut open_button = Button::default()
         .with_size(160, 30)
         .with_pos(wind.width() / 2 - 500 / 2, 20)
@@ -43,20 +43,25 @@ fn main() {
     }
     wifi_choice.borrow_mut().set_value(0);
     
-    let image_frame = Rc::new(RefCell::new(Frame::new(0, 80, 500, 500, "")));
+    let image_frame = Rc::new(RefCell::new(Frame::new(0, 80, 500, 560, "")));
+
+    let mut save_button = Button::default()
+        .with_size(160, 30)
+        .with_pos(wind.width() / 2 - 80, wind.height() - 50)
+        .with_label("Create Heatmap");
 
     wind.make_resizable(true);
-    wind.size_range(450, 350, 0, 0);
+    wind.size_range(500, 400, 0, 0);
     wind.end();
     wind.show();
 
     let image_frame_resize = Rc::clone(&image_frame);
     let cached_img_resize = Rc::clone(&cached_image);
     wind.resize_callback(move |_, _, _, w, h| {
-        image_frame_resize.borrow_mut().set_size(w, h - 100);
+        image_frame_resize.borrow_mut().set_size(w, h - 140);
         if let Some(ref img) = *cached_img_resize.borrow() {
             let mut img = img.clone();
-            img.scale(w, h - 100, true, true);
+            img.scale(w, h - 140, true, true);
             image_frame_resize.borrow_mut().set_image(Some(img));
         }
     });
@@ -84,6 +89,20 @@ fn main() {
                 img.scale(frame_w, frame_h, true, true);
                 image_frame_open_button.borrow_mut().set_image(Some(img));
             }
+        }
+    });
+
+    let measurements_points_save = Rc::clone(&measurement_points);
+    let wifi_choice_save = Rc::clone(&wifi_choice);
+    save_button.set_callback(move |_| {
+        if !measurements_points_save.borrow().is_empty() {
+            println!("Measurements: {:?}", measurements_points_save.borrow());
+            if let Some(file_path) = save_dialog(&wifi_choice_save.borrow().choice().unwrap_or_default()) {
+                println!("Save Path: {}", file_path);
+            }
+        } else {
+            println!("No WiFi selected. Alerting user.");
+            alert_default("Please take some measurements first by clicking the image.");
         }
     });
 
@@ -147,23 +166,40 @@ fn handle_image_click(f: &mut Frame, img: &Option<SharedImage>, wifi_choice: &Ch
 
         wifi_measurements.push(current_measurement);
 
+        message_default("WiFi signal measurement recorded.");
+
         return true;
     } else {
         return false;
     }
 }
 
-fn choose_file() -> Option<String>{
+fn choose_file() -> Option<String> {
     let mut chooser = dialog::FileChooser::new(
         ".",
-        "*.{png,jpg,svg}",
-        dialog::FileChooserType::Multi,
+        "*.{png,jpg,jpeg,bmp,gif,svg}",
+        dialog::FileChooserType::Single,
         "Select Room plan",
     );
     chooser.show();
-    chooser.window().set_pos(300, 300);
     while chooser.shown() {
         app::wait();
     }
     return chooser.value(1);
+}
+
+fn save_dialog(wifi_name: &str) -> Option<String> {
+    let mut chooser = dialog::FileChooser::new(
+        ".",
+        "*.png",
+        dialog::FileChooserType::Create,
+        "Save Heatmap",
+    );
+    chooser.set_filter("*.png");
+    chooser.set_value(&format!("heatmap_{}.png", wifi_name));
+    chooser.show();
+    while chooser.shown() {
+        app::wait();
+    }
+    chooser.value(1)
 }
