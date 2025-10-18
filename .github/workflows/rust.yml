@@ -53,8 +53,15 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
       
+      - name: Rename binary for upload
+        run: |
+          EXT=""
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            EXT=".exe"
+          fi
+          cp target/${{ matrix.target }}/release/signal-locate${EXT} signal-locate-${{ matrix.os }}-${{ matrix.target }}${EXT}
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/signal-locate*
+          path: signal-locate-${{ matrix.os }}-${{ matrix.target }}*
