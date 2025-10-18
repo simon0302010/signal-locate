@@ -17,7 +17,11 @@ pub fn get_networks() -> Option<Vec<Wifi>> {
             }
         }
         Err(e) => {
-            eprintln!("Scan failed: {:?}", e);
+            if format!("{:?}", e).contains("CommandNotFound") {
+                eprintln!("Scan failed: Please ensure 'iw' is installed.");
+            } else {
+                eprintln!("Scan failed: {:?}", e);
+            }
             return None;
         }
     }

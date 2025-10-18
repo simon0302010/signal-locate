@@ -22,27 +22,10 @@ jobs:
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             artifact-name: signal-locate-linux-arm64
-          - os: macos-latest
-            runs-on: macos-latest
-            target: x86_64-apple-darwin
-            artifact-name: signal-locate-macos-x64
-          - os: macos-latest
-            runs-on: macos-latest
-            target: aarch64-apple-darwin
-            artifact-name: signal-locate-macos-arm64
-          - os: windows-latest
-            runs-on: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact-name: signal-locate-windows-x64
-          - os: windows-latest
-            runs-on: windows-latest
-            target: aarch64-pc-windows-msvc
-            artifact-name: signal-locate-windows-arm64
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -55,14 +38,9 @@ jobs:
           targets: ${{ matrix.target }}
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
-      - name: Prepare artifact (Unix)
-        if: runner.os != 'Windows'
+      - name: Prepare artifact
         run: |
           cp target/${{ matrix.target }}/release/signal-locate ${{ matrix.artifact-name }}
-      - name: Prepare artifact (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          Copy-Item target/${{ matrix.target }}/release/signal-locate.exe ${{ matrix.artifact-name }}.exe
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:

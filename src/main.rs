@@ -1,6 +1,7 @@
 use fltk::{app, button::Button, dialog::{self, alert_default, message_default}, enums::Event, frame::Frame, image::{SharedImage}, menu::Choice, prelude::*, window::Window};
 use std::{cell::RefCell, rc::Rc};
 use image::RgbImage;
+use libc;
 
 mod heatmap;
 use heatmap::gen_heatmap;
@@ -18,6 +19,15 @@ struct WiFiMeasurement {
 }
 
 fn main() {
+    if std::env::consts::OS != "linux" {
+        eprintln!("This program is designed to run on Linux. It may not work as expected.")
+    }
+
+    if !unsafe { libc::geteuid() == 0 } {
+        eprintln!("Please run this program as root.");
+        return;
+    }
+
     let file_path: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
     let cached_image: Rc<RefCell<Option<SharedImage>>> = Rc::new(RefCell::new(None));
     let measurement_points: Rc<RefCell<Vec<WiFiMeasurement>>> = Rc::new(RefCell::new(Vec::new()));
