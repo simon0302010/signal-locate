@@ -1,5 +1,6 @@
-use fltk::{app, button::Button, dialog::{self, alert_default, message_default}, enums::Event, frame::Frame, image::SharedImage, menu::Choice, prelude::*, window::Window};
+use fltk::{app, button::Button, dialog::{self, alert_default, message_default}, enums::Event, frame::Frame, image::{SharedImage}, menu::Choice, prelude::*, window::Window};
 use std::{cell::RefCell, rc::Rc};
+use image::RgbImage;
 
 mod heatmap;
 use heatmap::gen_heatmap;
@@ -104,10 +105,10 @@ fn main() {
                 println!("Save Path: {}", save_path);
 
                 let temp_img = if let Some(ref path) = *file_path_save.borrow() {
-                    SharedImage::load(path)
+                    image::open(path)
                 } else {
                     eprintln!("No file selected.");
-                    Err(FltkError::Internal(FltkErrorKind::ResourceNotFound))
+                    return;
                 };
 
                 let (img_width, img_height) = match temp_img {
@@ -140,12 +141,26 @@ fn main() {
                     .collect();
 
                 let generated_heatmap = gen_heatmap(&points, img_width as usize, img_height as usize, (img_width as f64 * (1.0 / points.len() as f64 + 0.05)) as usize);
+                if let Some(img_path) = &*file_path_save.borrow() {
+                    let overlayed_heatmap = overlay_image(img_path, &generated_heatmap);
 
-                match generated_heatmap.save(save_path) {
-                    Ok(_) => message_default("Successfully created heatmap."),
-                    Err(e) => {
-                        eprintln!("Failed to save heatmap: {}", e);
-                        alert_default("Failed to save heatmap.");
+                    match overlayed_heatmap.save(save_path) {
+                        Ok(_) => message_default("Successfully created heatmap."),
+                        Err(e) => {
+                            eprintln!("Failed to save heatmap: {}", e);
+                            alert_default("Failed to save heatmap.");
+                        }
+                    }
+                } else {
+                    eprintln!("Could not load image for overlaying. Only saving heatmap");
+                    alert_default("Could not load image for overlaying. Only saving heatmap.");
+                    
+                    match generated_heatmap.save(save_path) {
+                        Ok(_) => message_default("Successfully created heatmap."),
+                        Err(e) => {
+                            eprintln!("Failed to save heatmap: {}", e);
+                            alert_default("Failed to save heatmap.");
+                        }
                     }
                 }
             }
@@ -169,6 +184,20 @@ fn main() {
     });
 
     app.run().unwrap();
+}
+
+fn overlay_image(file_path: &str, heatmap_img: &RgbImage) -> RgbImage {
+    let mut base_img_raw = image::open(file_path)
+        .expect("Failed to load base image")
+        .to_rgb8();
+
+    for (base_pixel, heat_pixel) in base_img_raw.pixels_mut().zip(heatmap_img.pixels()) {
+        for i in 0..3 {
+            base_pixel[i] = ((base_pixel[i] as f32) * 0.40 + (heat_pixel[i] as f32) * 0.60) as u8;
+        }
+    }
+
+    base_img_raw
 }
 
 fn handle_image_click(f: &mut Frame, img: &Option<SharedImage>, wifi_choice: &Choice, wifi_measurements: &mut Vec<WiFiMeasurement>) -> bool {

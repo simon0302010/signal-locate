@@ -23,36 +23,51 @@ pub fn generate_random() {
 // point: (x, y, strength)
 pub fn gen_heatmap(points: &[(f64, f64, f64)], width: usize, height: usize, radius: usize) -> RgbImage {
     let grad = GradientBuilder::new()
-            .html_colors(&["red", "yellow", "green"])
-            .build::<colorgrad::CatmullRomGradient>()
-            .unwrap();
-
+        .html_colors(&["red", "yellow", "green"])
+        .build::<colorgrad::CatmullRomGradient>()
+        .unwrap();
+    
     let sigma = radius as f64 / 2.0;
     let mut heatmap = vec![vec![0.0f64; width]; height];
-
+    
     for &(px, py, strength) in points {
-        let px = px as i32;
-        let py = py as i32;
-        for y in 0..height {
-            for x in 0..width {
-                let dx = x as i32 - px;
-                let dy = y as i32 - py;
+        let px_int = px as i32;
+        let py_int = py as i32;
+        
+        let r = (radius * 3) as i32;
+        let y_min = (py_int - r).max(0) as usize;
+        let y_max = (py_int + r).min(height as i32 - 1) as usize;
+        let x_min = (px_int - r).max(0) as usize;
+        let x_max = (px_int + r).min(width as i32 - 1) as usize;
+        
+        for y in y_min..=y_max {
+            for x in x_min..=x_max {
+                let dx = x as f64 - px;
+                let dy = y as f64 - py;
                 let dist2 = dx*dx + dy*dy;
-                let weight = (-dist2 as f64 / (2.0 * sigma * sigma)).exp();
+                let weight = (-dist2 / (2.0 * sigma * sigma)).exp();
                 heatmap[y][x] += strength * weight;
             }
         }
     }
-
-    let max = heatmap.iter().flat_map(|row| row.iter()).cloned().fold(0./0., f64::max);
+    
+    let max = heatmap.iter()
+        .flat_map(|row| row.iter())
+        .cloned()
+        .fold(f64::NEG_INFINITY, f64::max);
+    
+    let max = if max > 0.0 { max } else { 1.0 };
+    
     let mut img = RgbImage::new(width as u32, height as u32);
+    
     for (y, row) in heatmap.iter().enumerate() {
         for (x, &val) in row.iter().enumerate() {
-            let norm = (val / max).min(1.0);
+            let norm = (val / max).clamp(0.0, 1.0);
             let color = heatmap_color(norm, &grad);
             img.put_pixel(x as u32, y as u32, color);
         }
     }
+    
     img
 }
 
