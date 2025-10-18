@@ -1,10 +1,11 @@
 use image::{RgbImage, Rgb};
+use colorgrad::{CatmullRomGradient, GradientBuilder, Gradient};
 use rand::Rng;
 
 // function to create test heatmap
 #[allow(dead_code)]
 pub fn generate_random() {
-    let points_count = 10;
+    let points_count = 20;
     let mut points: Vec<(f64, f64, f64)> = Vec::new();
     let mut rng = rand::rng();
 
@@ -21,6 +22,11 @@ pub fn generate_random() {
 
 // point: (x, y, strength)
 pub fn gen_heatmap(points: &[(f64, f64, f64)], width: usize, height: usize, radius: usize) -> RgbImage {
+    let grad = GradientBuilder::new()
+            .html_colors(&["red", "yellow", "green"])
+            .build::<colorgrad::CatmullRomGradient>()
+            .unwrap();
+
     let sigma = radius as f64 / 2.0;
     let mut heatmap = vec![vec![0.0f64; width]; height];
 
@@ -43,18 +49,19 @@ pub fn gen_heatmap(points: &[(f64, f64, f64)], width: usize, height: usize, radi
     for (y, row) in heatmap.iter().enumerate() {
         for (x, &val) in row.iter().enumerate() {
             let norm = (val / max).min(1.0);
-            let color = heatmap_color(norm);
+            let color = heatmap_color(norm, &grad);
             img.put_pixel(x as u32, y as u32, color);
         }
     }
     img
 }
 
-#[allow(dead_code)]
-fn heatmap_color(v: f64) -> Rgb<u8> {
+fn heatmap_color(v: f64, grad: &CatmullRomGradient) -> Rgb<u8> {
     let v = v.max(0.0).min(1.0);
-    let r = (255.0 * (v - 0.5).max(0.0) * 2.0) as u8;
-    let g = (255.0 * (1.0 - (v - 0.5).abs() * 2.0)) as u8;
-    let b = (255.0 * (0.5 - v).max(0.0) * 2.0) as u8;
-    Rgb([r, g, b])
+    let col = grad.at(v as f32);
+    Rgb([
+        (col.r * 255.0) as u8,
+        (col.g * 255.0) as u8,
+        (col.b * 255.0) as u8,
+    ])
 }

@@ -139,7 +139,7 @@ fn main() {
                     ))
                     .collect();
 
-                let generated_heatmap = gen_heatmap(&points, img_width as usize, img_height as usize, (img_width as f64 * 0.1) as usize);
+                let generated_heatmap = gen_heatmap(&points, img_width as usize, img_height as usize, (img_width as f64 * (1.0 / points.len() as f64 + 0.05)) as usize);
 
                 match generated_heatmap.save(save_path) {
                     Ok(_) => message_default("Successfully created heatmap."),
