@@ -5,11 +5,12 @@
 
 # Signal Locate
 
-A tool to create a heatmap of wifi signal strength.
+A tool to create a heatmap of wifi signal strength. Currently only Linux and X11 are supported.
 
 ## Requirements
 
 - Linux
+- X11
 - A WiFi adapter
 - `iw` installed
 
