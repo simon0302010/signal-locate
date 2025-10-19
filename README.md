@@ -7,6 +7,10 @@
 
 A tool to create a heatmap of wifi signal strength. Currently only Linux and X11 are supported.
 
+## Demo
+
+https://github.com/user-attachments/assets/79be7a2d-d2c9-4647-ad41-b8cca2ac6b1b
+
 ## Requirements
 
 - Linux
