@@ -1,9 +1,12 @@
 use std::{path::{Path, PathBuf}, sync::Arc};
 
 use eframe::egui;
-use egui::{Image, ImageButton};
+use egui::{Image, ImageButton, ComboBox};
 use egui_file_dialog::FileDialog;
 use egui_extras::install_image_loaders;
+
+mod wifitools;
+use wifitools::{get_networks, strength_by_ssid};
 
 fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
@@ -19,10 +22,20 @@ fn main() -> Result<(), eframe::Error> {
 struct SignalLocate {
     open_dialog: FileDialog,
     img_path: Option<PathBuf>,
+    wifi_names: Vec<String>,
+    selected_wifi: Option<usize>,
 }
 
 impl Default for SignalLocate {
     fn default() -> Self {
+        let wifis = get_networks();
+        if wifis.is_none() {
+            eprintln!("Exiting.");
+            std::process::exit(1)
+        }
+
+        let wifis_names = wifis.as_ref().unwrap().iter().map(|n| n.ssid.clone()).collect::<Vec<String>>();
+
         Self {
             open_dialog: FileDialog::new()
                 .show_new_folder_button(false)
@@ -39,6 +52,8 @@ impl Default for SignalLocate {
                     })
                 ),
             img_path: None,
+            wifi_names: wifis_names,
+            selected_wifi: None,
         }
     }
 }
@@ -47,9 +62,24 @@ impl eframe::App for SignalLocate {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical_centered(|ui| {
-                if ui.button("Open Room Plan").clicked() {
-                    self.open_dialog.pick_file();
-                }
+                ui.horizontal(|ui| {
+                    if ui.button("Open Room Plan").clicked() {
+                        self.open_dialog.pick_file();
+                    }
+
+                    ComboBox::from_label("Select Network")
+                        .selected_text(
+                            self.selected_wifi
+                                .and_then(|i| self.wifi_names.get(i))
+                                .unwrap_or(&"Choose...".to_string())
+                        )
+                        .show_ui(ui, |ui| {
+                            for (i, name) in self.wifi_names.iter().enumerate() {
+                                ui.selectable_value(&mut self.selected_wifi, Some(i), name);
+                            }
+                        })
+
+                });
 
                 ui.add_space(5.0);
 
