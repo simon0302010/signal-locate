@@ -141,6 +141,7 @@ impl eframe::App for SignalLocate {
                     if image_path.exists() {
                         let uri = format!("file://{}", image_path.to_string_lossy());
                         let image_element = ui.add(ImageButton::new(Image::new(uri)));
+
                         if image_element.clicked() {
                             println!("Clicked Image.");
                             if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
@@ -284,6 +285,18 @@ impl eframe::App for SignalLocate {
                                 eprintln!("No measurements found. Alerting user.");
                                 self.toasts.warning("Please take some measurements first by clicking the image.").duration(Duration::from_secs(5));
                             }
+                        }
+
+                        let painter = ui.painter_at(image_element.rect);
+                        let rect = image_element.rect;
+
+                        let radius = 8.0;
+                        for wifi_point in &self.measurement_points {
+                            let pos = egui::pos2(
+                                rect.left() + wifi_point.prop_x as f32 * rect.width(),
+                                rect.top() + wifi_point.prop_y as f32 * rect.height()
+                            );
+                            painter.circle_filled(pos, radius, egui::Color32::from_rgb(255, 100, 100));
                         }
                     }
                 }
