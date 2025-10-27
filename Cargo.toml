@@ -10,7 +10,6 @@ license = "GPL-3.0-only"
 [dependencies]
 wifiscanner = "0.5.*"
 chrono = "0.4.*"
-fltk = "1.5.*"
 rand = "0.9.*"
 image = { version = "0.25.*", features = ["png", "jpeg"] }
 colorgrad = "0.7.*"

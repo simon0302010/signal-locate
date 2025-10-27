@@ -26,7 +26,8 @@ struct WiFiMeasurement {
 }
 
 fn main() -> Result<(), eframe::Error> {
-    if std::env::consts::OS == "linux" && !unsafe { libc::geteuid() == 0 } {
+    #[cfg(target_os = "linux")]
+    if !unsafe { libc::geteuid() == 0 } {
         eprintln!("Please run this program as root.");
         std::process::exit(1);
     }
