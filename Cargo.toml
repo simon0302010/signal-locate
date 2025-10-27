@@ -10,8 +10,12 @@ license = "GPL-3.0-only"
 [dependencies]
 wifiscanner = "0.5.*"
 chrono = "0.4.*"
-fltk = "1.5.*"
 rand = "0.9.*"
-image = "0.25.*"
+image = { version = "0.25.*", features = ["png", "jpeg"] }
 colorgrad = "0.7.*"
 libc = "0.2.*"
+egui = "0.33.0"
+egui_extras = { version = "0.33.0", features = ["all_loaders"] }
+eframe = "0.33.0"
+egui-file-dialog = "0.12.*"
+egui-notify = "0.21.*"
