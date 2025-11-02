@@ -1,11 +1,15 @@
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::{path::{Path, PathBuf}, sync::Arc};
 use std::time::Duration;
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use eframe::egui;
+#[allow(deprecated)]
 use egui::{ComboBox, Image, ImageButton};
-use egui_file_dialog::FileDialog;
 use egui_extras::install_image_loaders;
+use egui_file_dialog::FileDialog;
 use egui_notify::Toasts;
 
 use image::RgbImage;
@@ -16,13 +20,12 @@ use heatmap::gen_heatmap;
 mod wifitools;
 use wifitools::{get_networks, strength_by_ssid};
 
-#[derive(Clone)]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct WiFiMeasurement {
     ssid: String,
     strength: f64,
     prop_x: f64,
-    prop_y: f64
+    prop_y: f64,
 }
 
 fn main() -> Result<(), eframe::Error> {
@@ -33,7 +36,7 @@ fn main() -> Result<(), eframe::Error> {
     }
 
     eframe::run_native(
-        "Signal Locate", 
+        "Signal Locate",
         eframe::NativeOptions::default(),
         Box::new(|cc| {
             install_image_loaders(&cc.egui_ctx);
@@ -62,7 +65,12 @@ impl Default for SignalLocate {
             std::process::exit(1)
         }
 
-        let wifis_names = wifis.as_ref().unwrap().iter().map(|n| n.ssid.clone()).collect::<Vec<String>>();
+        let wifis_names = wifis
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|n| n.ssid.clone())
+            .collect::<Vec<String>>();
 
         let (tx, rx) = mpsc::channel::<WiFiMeasurement>();
 
@@ -70,16 +78,16 @@ impl Default for SignalLocate {
             open_dialog: FileDialog::new()
                 .show_new_folder_button(false)
                 .add_file_filter(
-                    "Images", 
+                    "Images",
                     Arc::new(|p: &Path| {
                         p.extension()
-                         .and_then(|s| s.to_str())
-                         .map(|ext| {
-                             let ext = ext.to_ascii_lowercase();
-                             ext == "png" || ext == "jpg" || ext == "jpeg"
-                         })
-                         .unwrap_or(false)
-                    })
+                            .and_then(|s| s.to_str())
+                            .map(|ext| {
+                                let ext = ext.to_ascii_lowercase();
+                                ext == "png" || ext == "jpg" || ext == "jpeg"
+                            })
+                            .unwrap_or(false)
+                    }),
                 ),
             save_dialog: FileDialog::new()
                 .show_new_folder_button(true)
@@ -101,7 +109,9 @@ impl eframe::App for SignalLocate {
         if let Some(receiver) = &self.measurement_receiver {
             while let Ok(measurement) = receiver.try_recv() {
                 self.measurement_points.push(measurement);
-                self.toasts.success("WiFi signal measurement recorded.").duration(Duration::from_secs(4));
+                self.toasts
+                    .success("WiFi signal measurement recorded.")
+                    .duration(Duration::from_secs(4));
             }
         }
 
@@ -134,167 +144,166 @@ impl eframe::App for SignalLocate {
                     self.img_path = Some(path.to_path_buf());
                 }
 
-                if let Some(image_path) = &self.img_path {
-                    if image_path.exists() {
-                        let uri = format!("file://{}", image_path.to_string_lossy());
-                        let image_element = ui.add(ImageButton::new(Image::new(uri)));
+                if let Some(image_path) = &self.img_path && image_path.exists() {
+                    let uri = format!("file://{}", image_path.to_string_lossy());
+                    #[allow(deprecated)]
+                    let image_element = ui.add(ImageButton::new(Image::new(uri)));
 
-                        if image_element.clicked() {
-                            println!("Clicked Image.");
-                            if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
-                                let local_x = pos.x - image_element.rect.min.x;
-                                let local_y = pos.y - image_element.rect.min.y;
-                                let prop_x = (local_x / image_element.rect.width()).clamp(0.0, 1.0);
-                                let prop_y = (local_y / image_element.rect.height()).clamp(0.0, 1.0);
-                                println!("Clicked image at ({}, {})", prop_x, prop_y);
-                                if let Some(selected_index) = self.selected_wifi {
-                                    if let (Some(sender), Some(ssid)) = (&self.measurement_sender, self.wifi_names.get(selected_index)) {
-                                        let sender = sender.clone();
-                                        let ssid = ssid.clone();
-                                        std::thread::spawn(move || {
-                                            let signal_strength = strength_by_ssid(ssid.clone());
-                                            let measurement = WiFiMeasurement {
-                                                ssid,
-                                                strength: signal_strength,
-                                                prop_x: prop_x as f64,
-                                                prop_y: prop_y as f64,
-                                            };
-                                            let _ = sender.send(measurement);
-                                        });
+                    if image_element.clicked() {
+                        println!("Clicked Image.");
+                        if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
+                            let local_x = pos.x - image_element.rect.min.x;
+                            let local_y = pos.y - image_element.rect.min.y;
+                            let prop_x = (local_x / image_element.rect.width()).clamp(0.0, 1.0);
+                            let prop_y = (local_y / image_element.rect.height()).clamp(0.0, 1.0);
+                            println!("Clicked image at ({}, {})", prop_x, prop_y);
+                            if let Some(selected_index) = self.selected_wifi {
+                                if let (Some(sender), Some(ssid)) = (&self.measurement_sender, self.wifi_names.get(selected_index)) {
+                                    let sender = sender.clone();
+                                    let ssid = ssid.clone();
+                                    std::thread::spawn(move || {
+                                        let signal_strength = strength_by_ssid(ssid.clone());
+                                        let measurement = WiFiMeasurement {
+                                            ssid,
+                                            strength: signal_strength,
+                                            prop_x: prop_x as f64,
+                                            prop_y: prop_y as f64,
+                                        };
+                                        let _ = sender.send(measurement);
+                                    });
 
-                                        self.toasts.info("Please wait for the WiFi signal to be measured.").duration(Duration::from_secs(4));
-                                    }
-                                } else {
-                                    self.toasts.warning("Please select a WiFi Network first.").duration(Duration::from_secs(5));
+                                    self.toasts.info("Please wait for the WiFi signal to be measured.").duration(Duration::from_secs(4));
                                 }
+                            } else {
+                                self.toasts.warning("Please select a WiFi Network first.").duration(Duration::from_secs(5));
                             }
                         }
+                    }
 
-                        if ui.button("Create Heatmap").clicked() {
-                            self.save_dialog.save_file();
-                        }
+                    if ui.button("Create Heatmap").clicked() {
+                        self.save_dialog.save_file();
+                    }
 
-                        self.save_dialog.update(ctx);
+                    self.save_dialog.update(ctx);
 
-                        // heatmap creation
-                        if let Some(save_path) = self.save_dialog.take_picked() {
-                            if !self.measurement_points.is_empty() && let Some(selected_index) = self.selected_wifi {
-                                let wifi_choice_str = self.wifi_names.get(selected_index);
-                                println!("Measurements: {:?}", self.measurement_points);
-                                println!("Save Path: {:?}", save_path.to_str());
+                    // heatmap creation
+                    if let Some(save_path) = self.save_dialog.take_picked() {
+                        if !self.measurement_points.is_empty() && let Some(selected_index) = self.selected_wifi {
+                            let wifi_choice_str = self.wifi_names.get(selected_index);
+                            println!("Measurements: {:?}", self.measurement_points);
+                            println!("Save Path: {:?}", save_path.to_str());
 
-                                if wifi_choice_str.is_none() {
-                                    self.toasts.error("Couldn't get WiFi name. Try restarting the program.").duration(Duration::from_secs(5));
-                                }
+                            if wifi_choice_str.is_none() {
+                                self.toasts.error("Couldn't get WiFi name. Try restarting the program.").duration(Duration::from_secs(5));
+                            }
 
-                                let temp_img = if let Some(ref path) = self.img_path {
-                                    image::open(path)
-                                } else {
-                                    eprintln!("No file selected.");
-                                    self.toasts.error("No image selected. Try reloading the image.").duration(Duration::from_secs(5));
+                            let temp_img = if let Some(ref path) = self.img_path {
+                                image::open(path)
+                            } else {
+                                eprintln!("No file selected.");
+                                self.toasts.error("No image selected. Try reloading the image.").duration(Duration::from_secs(5));
+                                return;
+                            };
+
+                            let (img_width, img_height) = match temp_img {
+                                Ok(ref img) => (img.width(), img.height()),
+                                Err(_) => {
+                                    eprintln!("Failed to load image for heatmap.");
+                                    self.toasts.error("Failed to load image for heatmap. Ensure the original image still exists.").duration(Duration::from_secs(5));
                                     return;
-                                };
+                                }
+                            };
 
-                                let (img_width, img_height) = match temp_img {
-                                    Ok(ref img) => (img.width(), img.height()),
-                                    Err(_) => {
-                                        eprintln!("Failed to load image for heatmap.");
-                                        self.toasts.error("Failed to load image for heatmap. Ensure the original image still exists.").duration(Duration::from_secs(5));
+                            let filtered_measurements: Vec<_> = if let Some(wifi_choice_str) = wifi_choice_str {
+                                if !wifi_choice_str.is_empty() {
+                                    self.measurement_points
+                                        .iter()
+                                        .filter(|wifi| wifi.ssid == *wifi_choice_str)
+                                        .cloned()
+                                        .collect()
+                                } else {
+                                    self.measurement_points.clone()
+                                }
+                            } else {
+                                self.measurement_points.clone()
+                            };
+
+                            let points: Vec<(f64, f64, f64)> = filtered_measurements
+                                .iter()
+                                .map(|m| (
+                                    m.prop_x * img_width as f64,
+                                    m.prop_y * img_height as f64,
+                                    m.strength
+                                ))
+                                .collect();
+
+                            if points.is_empty() {
+                                self.toasts.warning("No measurements for the selected WiFi network.").duration(Duration::from_secs(5));
+                                return;
+                            }
+
+                            let generated_heatmap = gen_heatmap(&points, img_width as usize, img_height as usize, (img_width as f64 * (1.0 / points.len() as f64 + 0.05)) as usize);
+                            if let Some(ref img_path) = self.img_path {
+                                let overlayed_heatmap = match img_path.to_str() {
+                                    Some(path_str) => match overlay_image(path_str, &generated_heatmap) {
+                                        Ok(img) => img,
+                                        Err(e) => {
+                                            eprintln!("Failed to overlay heatmap: {}", e);
+                                            self.toasts.warning(format!("Failed to overlay heatmap: {}. Only saving heatmap.", e)).duration(Duration::from_secs(5));
+
+                                            match generated_heatmap.save(save_path) {
+                                                Ok(_) => { self.toasts.success("Successfully created heatmap.").duration(Duration::from_secs(5)); },
+                                                Err(e) => {
+                                                    eprintln!("Failed to save heatmap: {}", e);
+                                                    self.toasts.error(format!("Failed to save heatmap: {}", e)).duration(Duration::from_secs(5));
+                                                }
+                                            }
+
+                                            return;
+                                        }
+                                    },
+                                    None => {
+                                        eprintln!("Invalid image path.");
+                                        self.toasts.error("Invalid image path.").duration(Duration::from_secs(5));
                                         return;
                                     }
                                 };
 
-                                let filtered_measurements: Vec<_> = if let Some(wifi_choice_str) = wifi_choice_str {
-                                    if !wifi_choice_str.is_empty() {
-                                        self.measurement_points
-                                            .iter()
-                                            .filter(|wifi| wifi.ssid == *wifi_choice_str)
-                                            .cloned()
-                                            .collect()
-                                    } else {
-                                        self.measurement_points.clone()
-                                    }
-                                } else {
-                                    self.measurement_points.clone()
-                                };
-
-                                let points: Vec<(f64, f64, f64)> = filtered_measurements
-                                    .iter()
-                                    .map(|m| (
-                                        m.prop_x * img_width as f64,
-                                        m.prop_y * img_height as f64,
-                                        m.strength
-                                    ))
-                                    .collect();
-
-                                if points.is_empty() {
-                                    self.toasts.warning("No measurements for the selected WiFi network.").duration(Duration::from_secs(5));
-                                    return;
-                                }
-
-                                let generated_heatmap = gen_heatmap(&points, img_width as usize, img_height as usize, (img_width as f64 * (1.0 / points.len() as f64 + 0.05)) as usize);
-                                if let Some(ref img_path) = self.img_path {
-                                    let overlayed_heatmap = match img_path.to_str() {
-                                        Some(path_str) => match overlay_image(path_str, &generated_heatmap) {
-                                            Ok(img) => img,
-                                            Err(e) => {
-                                                eprintln!("Failed to overlay heatmap: {}", e);
-                                                self.toasts.warning(format!("Failed to overlay heatmap: {}. Only saving heatmap.", e)).duration(Duration::from_secs(5));
-
-                                                match generated_heatmap.save(save_path) {
-                                                    Ok(_) => { self.toasts.success("Successfully created heatmap.").duration(Duration::from_secs(5)); },
-                                                    Err(e) => {
-                                                        eprintln!("Failed to save heatmap: {}", e);
-                                                        self.toasts.error(format!("Failed to save heatmap: {}", e)).duration(Duration::from_secs(5));
-                                                    }
-                                                }
-
-                                                return;
-                                            }
-                                        },
-                                        None => {
-                                            eprintln!("Invalid image path.");
-                                            self.toasts.error("Invalid image path.").duration(Duration::from_secs(5));
-                                            return;
-                                        }
-                                    };
-
-                                    match overlayed_heatmap.save(save_path) {
-                                        Ok(_) => { self.toasts.success("Successfully created heatmap.").duration(Duration::from_secs(5)); },
-                                        Err(e) => {
-                                            eprintln!("Failed to save heatmap: {}", e);
-                                            self.toasts.error(format!("Failed to save heatmap: {}", e)).duration(Duration::from_secs(5));
-                                        }
-                                    }
-                                } else {
-                                    eprintln!("Could not load image for overlaying. Only saving heatmap");
-                                    self.toasts.warning("Could not load image for overlaying. Only saving heatmap.").duration(Duration::from_secs(5));
-                                    
-                                    match generated_heatmap.save(save_path) {
-                                        Ok(_) => { self.toasts.success("Successfully created heatmap.").duration(Duration::from_secs(5)); },
-                                        Err(e) => {
-                                            eprintln!("Failed to save heatmap: {}", e);
-                                            self.toasts.error(format!("Failed to save heatmap: {}", e)).duration(Duration::from_secs(5));
-                                        }
+                                match overlayed_heatmap.save(save_path) {
+                                    Ok(_) => { self.toasts.success("Successfully created heatmap.").duration(Duration::from_secs(5)); },
+                                    Err(e) => {
+                                        eprintln!("Failed to save heatmap: {}", e);
+                                        self.toasts.error(format!("Failed to save heatmap: {}", e)).duration(Duration::from_secs(5));
                                     }
                                 }
                             } else {
-                                eprintln!("No measurements found. Alerting user.");
-                                self.toasts.warning("Please take some measurements first by clicking the image.").duration(Duration::from_secs(5));
+                                eprintln!("Could not load image for overlaying. Only saving heatmap");
+                                self.toasts.warning("Could not load image for overlaying. Only saving heatmap.").duration(Duration::from_secs(5));
+
+                                match generated_heatmap.save(save_path) {
+                                    Ok(_) => { self.toasts.success("Successfully created heatmap.").duration(Duration::from_secs(5)); },
+                                    Err(e) => {
+                                        eprintln!("Failed to save heatmap: {}", e);
+                                        self.toasts.error(format!("Failed to save heatmap: {}", e)).duration(Duration::from_secs(5));
+                                    }
+                                }
                             }
+                        } else {
+                            eprintln!("No measurements found. Alerting user.");
+                            self.toasts.warning("Please take some measurements first by clicking the image.").duration(Duration::from_secs(5));
                         }
+                    }
 
-                        let painter = ui.painter_at(image_element.rect);
-                        let rect = image_element.rect;
+                    let painter = ui.painter_at(image_element.rect);
+                    let rect = image_element.rect;
 
-                        let radius = 8.0;
-                        for wifi_point in &self.measurement_points {
-                            let pos = egui::pos2(
-                                rect.left() + wifi_point.prop_x as f32 * rect.width(),
-                                rect.top() + wifi_point.prop_y as f32 * rect.height()
-                            );
-                            painter.circle_filled(pos, radius, egui::Color32::from_rgb(255, 100, 100));
-                        }
+                    let radius = 8.0;
+                    for wifi_point in &self.measurement_points {
+                        let pos = egui::pos2(
+                            rect.left() + wifi_point.prop_x as f32 * rect.width(),
+                            rect.top() + wifi_point.prop_y as f32 * rect.height()
+                        );
+                        painter.circle_filled(pos, radius, egui::Color32::from_rgb(255, 100, 100));
                     }
                 }
 
@@ -309,7 +318,9 @@ fn overlay_image(file_path: &str, heatmap_img: &RgbImage) -> Result<RgbImage, im
 
     for (base_pixel, heat_pixel) in base_img_raw.pixels_mut().zip(heatmap_img.pixels()) {
         for color_channel in 0..3 {
-            base_pixel[color_channel] = ((base_pixel[color_channel] as f32) * 0.40 + (heat_pixel[color_channel] as f32) * 0.60) as u8;
+            base_pixel[color_channel] = ((base_pixel[color_channel] as f32) * 0.40
+                + (heat_pixel[color_channel] as f32) * 0.60)
+                as u8;
         }
     }
 

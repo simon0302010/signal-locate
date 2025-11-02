@@ -1,5 +1,5 @@
-use wifiscanner::{self, scan, Wifi};
 use chrono::{self, Utc};
+use wifi_scan::{self, Wifi, scan};
 
 pub fn get_networks() -> Option<Vec<Wifi>> {
     let time_format: &'static str = "%Y-%m-%d %H:%M:%S";
@@ -7,13 +7,13 @@ pub fn get_networks() -> Option<Vec<Wifi>> {
     let current_time = Utc::now().format(time_format);
     match scanner_result {
         Ok(wifis) => {
-            if wifis.get(0) != None {
+            if !wifis.is_empty() {
                 println!("Detected {} Networks at {}.", wifis.len(), current_time);
-                return Some(wifis);
+                Some(wifis)
             } else {
                 eprintln!("No Networks detected.");
                 eprintln!("Please check your WiFi Adapter.");
-                return None;
+                None
             }
         }
         Err(e) => {
@@ -22,7 +22,7 @@ pub fn get_networks() -> Option<Vec<Wifi>> {
             } else {
                 eprintln!("Scan failed: {:?}", e);
             }
-            return None;
+            None
         }
     }
 }
@@ -32,13 +32,13 @@ pub fn strength_by_ssid(ssid: String) -> f64 {
     let max_rssi = -35.0;
     if let Some(wifis) = get_networks() {
         for wifi_network in wifis.iter() {
-            if wifi_network.ssid == ssid {
-                if let Ok(rssi) = wifi_network.signal_level.parse::<f64>() {
-                    let normalized = ((rssi - min_rssi) / (max_rssi - min_rssi)).clamp(0.0, 1.0);
-                    return normalized;
-                }
+            if wifi_network.ssid == ssid
+                && let Ok(rssi) = wifi_network.signal_level.parse::<f64>()
+            {
+                let normalized = ((rssi - min_rssi) / (max_rssi - min_rssi)).clamp(0.0, 1.0);
+                return normalized;
             }
         }
     }
-    return 0.0;
+    0.0
 }

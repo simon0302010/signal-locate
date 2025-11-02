@@ -3,12 +3,12 @@ name = "signal-locate"
 description = "A tool to create a heatmap of wifi signal strength."
 repository = "https://github.com/simon0302010/signal-locate"
 readme = "README.md"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 license = "GPL-3.0-only"
 
 [dependencies]
-wifiscanner = "0.5.*"
+wifi_scan = "0.6.*"
 chrono = "0.4.*"
 rand = "0.9.*"
 image = { version = "0.25.*", features = ["png", "jpeg"] }

@@ -18,9 +18,7 @@ https://github.com/user-attachments/assets/79be7a2d-d2c9-4647-ad41-b8cca2ac6b1b
 
 ## Compatibility Notes
 
-- Only macOS versions up to 13 (Ventura) are supported.
-- Windows is only supported if the system language is set to English.
-- `iw` must be installed and accessible in your system's PATH for Linux users.
+- macOS support is currently broken.
 
 ## Installation
 
